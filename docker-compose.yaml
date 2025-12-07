@@ -2,18 +2,18 @@ services:
   # --- DATABASE ---
   mongodb:
     image: mongo:6.0
-    container_name: bitaksi-mongo
+    container_name: bitaksi-taxihub-mongo  
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
     networks:
-      - bitaksi-network
+      - taxihub-network
 
   # --- DB GUI (Optional) ---
   mongo-express:
     image: mongo-express
-    container_name: bitaksi-mongo-express
+    container_name: bitaksi-taxihub-express 
     ports:
       - "8081:8081"
     environment:
@@ -22,14 +22,14 @@ services:
     depends_on:
       - mongodb
     networks:
-      - bitaksi-network
+      - taxihub-network
 
   # --- DRIVER SERVICE ---
   driver-service:
     build:
       context: ./driver-service
       dockerfile: Dockerfile
-    container_name: bitaksi-driver-service
+    container_name: bitaksi-taxihub-backend 
     ports:
       - "8080:8080"
     environment:
@@ -38,14 +38,14 @@ services:
     depends_on:
       - mongodb
     networks:
-      - bitaksi-network
+      - taxihub-network
 
   # --- API GATEWAY ---
   gateway:
     build:
       context: ./gateway
       dockerfile: Dockerfile
-    container_name: bitaksi-gateway
+    container_name: bitaksi-taxihub-gateway 
     ports:
       - "8000:8000"
     environment:
@@ -54,14 +54,14 @@ services:
     depends_on:
       - driver-service
     networks:
-      - bitaksi-network
+      - taxihub-network
 
-  # --- FRONTEND  ---
+  # --- FRONTEND ---
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: bitaksi-frontend
+    container_name: bitaksi-taxihub-frontend # <-- Yeni İsim
     ports:
       - "5173:5173"
     volumes:
@@ -72,10 +72,10 @@ services:
     depends_on:
       - gateway
     networks:
-      - bitaksi-network
+      - taxihub-network
 
 networks:
-  bitaksi-network:
+  taxihub-network:
     driver: bridge
 
 volumes:

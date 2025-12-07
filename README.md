@@ -1,73 +1,72 @@
-# Bitaksi TaxiHub - Backend Microservices
+# Bitaksi TaxiHub - Full Stack Microservices
 
-Bu proje, Bitaksi Hackathon kapsamında geliştirilmiş, sürücü yönetimi ve coğrafi konumlama (geospatial) işlevlerine sahip bir backend çözümüdür. Proje, Go programlama dili kullanılarak mikroservis mimarisine uygun şekilde tasarlanmış ve Docker üzerinde çalışacak şekilde yapılandırılmıştır.
+Bu proje, Bitaksi GO Bootcampi süreci kapsamında geliştirilmiştir. Sürücü yönetimi, coğrafi konumlama ve harita üzerinde görselleştirme işlevlerine sahip, mikroservis mimarisine uygun bir full-stack uygulamadır.
+
+Backend tarafı Go ile, Frontend tarafı React ile geliştirilmiş olup, tüm sistem Docker üzerinde çalışacak şekilde yapılandırılmıştır.
 
 ## Proje Mimarisi
 
-Sistem, sorumlulukların ayrıldığı üç ana bileşenden oluşmaktadır:
+Sistem dört ana bileşenden oluşmaktadır:
 
-* **API Gateway (Go + Echo):** Tüm HTTP isteklerini karşılayan giriş kapısıdır. JWT tabanlı kimlik doğrulama işlemlerini gerçekleştirir ve yetkilendirilmiş istekleri ilgili servislere yönlendirir (Reverse Proxy).
-* **Driver Service (Go + Standart Kütüphane):** İş mantığının yürütüldüğü servistir. MongoDB ile veri alışverişini sağlar ve Haversine formülü kullanarak koordinat bazlı mesafe hesaplamaları yapar.
-* **MongoDB:** Sürücü profillerini ve enlem/boylam verilerini saklayan veritabanı katmanıdır.
+* **Frontend (React + Vite + Leaflet):** Son kullanıcının harita üzerinde taksileri görüntülediği, araç tipine (Sarı/Siyah) göre filtreleme yapabildiği arayüz.
+* **API Gateway (Go + Echo):** Sistemin giriş kapısıdır. HTTP isteklerini karşılar, JWT tabanlı kimlik doğrulamayı yapar ve istekleri ilgili servislere yönlendirir (Reverse Proxy).
+* **Driver Service (Go):** Temel iş mantığının bulunduğu servistir. MongoDB ile iletişim kurar ve Haversine formülü ile koordinat bazlı mesafe hesaplamalarını gerçekleştirir.
+* **MongoDB:** Sürücü verilerini ve konum bilgilerini saklayan veritabanıdır.
 
-## Kullanılan Teknolojiler
+## Teknik Altyapı
 
-* **Dil:** Go (Golang) 1.24
-* **Web Framework:** Echo (Gateway servisi için)
-* **Veritabanı:** MongoDB
-* **Sanallaştırma:** Docker & Docker Compose
-* **Dokümantasyon:** Swagger (OpenAPI)
-* **Güvenlik:** JWT (JSON Web Token)
+**Backend**
+* Go (Golang) 1.24
+* Echo Framework (Gateway)
+* MongoDB & Mongo Driver
+* JWT (JSON Web Token)
+* Swagger (OpenAPI)
+
+**Frontend**
+* React.js
+* Leaflet (Harita Entegrasyonu)
+* Tailwind CSS
+* Axios
+
+**DevOps**
+* Docker & Docker Compose
 
 ## Kurulum ve Çalıştırma
 
-Proje, yerel geliştirme ortamında `docker-compose` kullanılarak tek komutla ayağa kaldırılabilir.
+Proje, docker-compose yapılandırması sayesinde tek komutla çalıştırılabilir. Bilgisayarınızda Docker Desktop'ın yüklü olması yeterlidir.
 
-### Gereksinimler
-
-* Docker
-* Docker Desktop (veya Daemon)
-
-### Kurulum Adımları
-
-1.  Depoyu yerel makinenize klonlayın:
+1.  **Projeyi Klonlayın:**
     ```bash
-    git clone [https://github.com/KULLANICI_ADINIZ/bitaksi-hackathon.git](https://github.com/KULLANICI_ADINIZ/bitaksi-hackathon.git)
-    cd bitaksi-hackathon
+    git clone [https://github.com/eneszeyt/bitaksi-TaxiHub.git](https://github.com/eneszeyt/bitaksi-TaxiHub.git)
+    cd bitaksi-TaxiHub
     ```
 
-2.  Servisleri derleyin ve başlatın:
+2.  **Servisleri Başlatın:**
     ```bash
     docker-compose up --build
     ```
+    Bu komut veritabanını, backend servislerini ve frontend uygulamasını sırasıyla hazırlar ve başlatır.
 
-3.  Konteynerler ayağa kalktığında servisler aşağıdaki portlarda çalışacaktır:
+3.  **Erişim Adresleri:**
+    Konteynerler ayağa kalktığında aşağıdaki adreslerden erişim sağlayabilirsiniz:
 
+    * **Frontend Arayüzü:** http://localhost:5173
     * **API Gateway:** http://localhost:8000
-    * **Swagger UI (Dokümantasyon):** http://localhost:8000/swagger/index.html
-    * **Mongo Express (Veritabanı Arayüzü):** http://localhost:8081
+    * **Swagger Dokümantasyonu:** http://localhost:8000/swagger/index.html
+    * **Mongo Express:** http://localhost:8081
 
-## API Kullanımı
+## Kullanım Detayları
 
-Sistemdeki endpoint'ler JWT koruması altındadır. İstek yapmadan önce token alınması gerekmektedir.
+**1. Arayüz Girişi**
+Frontend arayüzüne (http://localhost:5173) aşağıdaki varsayılan bilgilerle giriş yapabilirsiniz:
+* Kullanıcı Adı: `admin`
+* Şifre: `password123`
 
-### 1. Kimlik Doğrulama (Token Alma)
-Gateway üzerinden sisteme giriş yaparak Bearer token alınır.
+**2. Harita Özellikleri**
+Giriş yaptıktan sonra harita üzerinde kayıtlı sürücüleri görebilir, sağ üstteki butonlar ile sarı veya siyah taksi filtresi uygulayabilirsiniz. Sürücü pinlerine tıklayarak detayları görüntüleyebilirsiniz.
 
-* **Endpoint:** `POST /login`
-* **Body:**
-    ```json
-    {
-      "username": "admin",
-      "password": "password123"
-    }
-    ```
-
-### 2. Sürücü İşlemleri
-Elde edilen token, header bilgisine `Authorization: Bearer <TOKEN>` formatında eklenerek istek yapılır.
-
-* **Sürücü Listeleme:** `GET /drivers`
-* **Yakındaki Sürücüleri Bulma:** `GET /drivers/nearby?lat=41.0&lon=29.0&taxiType=yellow`
+**3. API Kullanımı**
+API'yi harici olarak kullanmak isterseniz `POST /login` endpoint'inden token almanız ve diğer isteklere `Authorization: Bearer <TOKEN>` başlığını eklemeniz gerekmektedir.
 
 ---
-*Bitaksi Hackathon süreci için geliştirilmiştir.*
+Bitaksi TaxiHub projesidir.

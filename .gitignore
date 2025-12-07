@@ -4,6 +4,7 @@ mongo-data/
 # --- IDE FILES ---
 .vscode/
 .idea/
+bitaksi_doc.pdf
 
 # --- FRONTEND (React & Node) - CRITICAL ---
 **/node_modules/
