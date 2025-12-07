@@ -17,6 +17,8 @@ type DriverRepository interface {
 	Create(ctx context.Context, driver *models.Driver) (string, error)
 	Update(ctx context.Context, id string, driver *models.Driver) error
 	List(ctx context.Context, page, pageSize int) ([]models.Driver, error)
+	// new method :
+	Search(ctx context.Context, taxiType string) ([]models.Driver, error)
 }
 
 type driverRepositoryImpl struct {
@@ -87,6 +89,29 @@ func (r *driverRepositoryImpl) List(ctx context.Context, page, pageSize int) ([]
 		SetSort(bson.D{{Key: "createdAt", Value: -1}}) // newest first
 
 	cursor, err := r.collection.Find(ctx, bson.M{}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var drivers []models.Driver
+	if err := cursor.All(ctx, &drivers); err != nil {
+		return nil, err
+	}
+
+	return drivers, nil
+}
+
+// Search returns drivers matching a criteria (e.g. taxi type)
+func (r *driverRepositoryImpl) Search(ctx context.Context, taxiType string) ([]models.Driver, error) {
+	filter := bson.M{}
+
+	// if taxiType is provided, filter by it
+	if taxiType != "" {
+		filter["taxiType"] = taxiType
+	}
+
+	cursor, err := r.collection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

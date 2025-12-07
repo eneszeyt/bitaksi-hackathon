@@ -47,7 +47,41 @@ func (h *DriverHandler) DriverByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// private method: createDriver
+// SearchNearby handles /drivers/nearby endpoint
+func (h *DriverHandler) SearchNearby(w http.ResponseWriter, r *http.Request) {
+	// Parse query params
+	latStr := r.URL.Query().Get("lat")
+	lonStr := r.URL.Query().Get("lon")
+	taxiType := r.URL.Query().Get("taxiType")
+
+	if latStr == "" || lonStr == "" {
+		http.Error(w, "missing lat or lon parameters", http.StatusBadRequest)
+		return
+	}
+
+	lat, err1 := strconv.ParseFloat(latStr, 64)
+	lon, err2 := strconv.ParseFloat(lonStr, 64)
+	if err1 != nil || err2 != nil {
+		http.Error(w, "invalid coordinates", http.StatusBadRequest)
+		return
+	}
+
+	results, err := h.service.FindNearby(r.Context(), lat, lon, taxiType)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if results == nil {
+		results = []map[string]interface{}{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
+// --- Private Helper Methods ---
+
 func (h *DriverHandler) createDriver(w http.ResponseWriter, r *http.Request) {
 	var driver models.Driver
 	if err := json.NewDecoder(r.Body).Decode(&driver); err != nil {
@@ -66,7 +100,6 @@ func (h *DriverHandler) createDriver(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
 
-// private method: updateDriver
 func (h *DriverHandler) updateDriver(w http.ResponseWriter, r *http.Request, id string) {
 	var driver models.Driver
 	if err := json.NewDecoder(r.Body).Decode(&driver); err != nil {
@@ -84,23 +117,19 @@ func (h *DriverHandler) updateDriver(w http.ResponseWriter, r *http.Request, id 
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 }
 
-// private method: listDrivers
 func (h *DriverHandler) listDrivers(w http.ResponseWriter, r *http.Request) {
-	// parse query params ?page=1&pageSize=20
 	pageStr := r.URL.Query().Get("page")
 	pageSizeStr := r.URL.Query().Get("pageSize")
 
 	page, _ := strconv.Atoi(pageStr)
 	pageSize, _ := strconv.Atoi(pageSizeStr)
 
-	// service will handle defaults if zero
 	drivers, err := h.service.ListDrivers(r.Context(), page, pageSize)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// ensure empty slice instead of null in json
 	if drivers == nil {
 		drivers = []models.Driver{}
 	}

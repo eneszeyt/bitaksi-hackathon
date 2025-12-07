@@ -35,7 +35,11 @@ func main() {
 	// 1. /drivers -> GET (List) & POST (Create)
 	http.HandleFunc("/drivers", h.DriversRoot)
 
-	// 2. /drivers/ -> PUT (Update) (trailing slash matches subpaths like /drivers/123)
+	// 2. /drivers/nearby -> GET (Nearby Search)
+	// IMPORTANT: This must be defined BEFORE "/drivers/" because "/drivers/" matches all subpaths
+	http.HandleFunc("/drivers/nearby", h.SearchNearby)
+
+	// 3. /drivers/ -> PUT (Update) (trailing slash matches subpaths like /drivers/123)
 	http.HandleFunc("/drivers/", h.DriverByID)
 
 	// start server
