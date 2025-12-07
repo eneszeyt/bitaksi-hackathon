@@ -22,86 +22,107 @@ type jwtCustomClaims struct {
 func main() {
 	e := echo.New()
 
-	// Middleware configurations
+	// middleware configurations
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	// --- 1. SETUP PROXY TARGET (Driver Service) ---
-	// Get URL from environment variable, default to localhost for local dev
-	targetURL := os.Getenv("DRIVER_SERVICE_URL")
-	if targetURL == "" {
-		targetURL = "http://localhost:8080"
-	}
+	// cors middleware configuration to allow frontend access
+	// this is crucial for the react app to communicate with the backend
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"}, // allow all origins (restrict this in production)
+		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
+	}))
+
+	// --- 1. setup proxy target (driver service) ---
+	// get url from environment variable, default to localhost for local dev
+	targetURL := getEnv("DRIVER_SERVICE_URL", "http://localhost:8080")
+
 	driverServiceURL, err := url.Parse(targetURL)
 	if err != nil {
 		e.Logger.Fatal(err)
 	}
 
-	// Create proxy targets and balancer
+	// create proxy targets and balancer
 	targets := []*middleware.ProxyTarget{{URL: driverServiceURL}}
 	balancer := middleware.NewRoundRobinBalancer(targets)
 
-	// --- 2. PUBLIC ROUTES (Accessible by everyone) ---
+	// --- 2. public routes (accessible by everyone) ---
 
-	// Login endpoint to generate JWT tokens
+	// login endpoint to generate jwt tokens
 	e.POST("/login", login)
 
-	// --- 3. PROTECTED ROUTES (Requires valid JWT) ---
+	// --- 3. protected routes (requires valid jwt) ---
 
-	// Group routes starting with /drivers
+	// group routes starting with /drivers
 	r := e.Group("/drivers")
 
-	// Configure JWT middleware
-	// "secret" is the signing key. In production, this should come from environment variables.
+	// security fix: read secret key from environment variable
+	jwtSecret := getEnv("JWT_SECRET", "secret")
+
+	// configure jwt middleware
 	config := echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwtCustomClaims)
 		},
-		SigningKey: []byte("secret"),
+		SigningKey: []byte(jwtSecret),
 	}
 
-	// Apply JWT middleware to the group
+	// apply jwt middleware to the group
 	r.Use(echojwt.WithConfig(config))
 
-	// If token is valid, forward the request to Driver Service (Reverse Proxy)
+	// if token is valid, forward the request to driver service (reverse proxy)
 	r.Use(middleware.Proxy(balancer))
 
-	// Start Gateway server
+	// start gateway server
 	e.Logger.Fatal(e.Start(":8000"))
 }
 
-// login handler performs mock authentication and returns a JWT token
+// login handler performs mock authentication and returns a jwt token
 func login(c echo.Context) error {
 	username := c.FormValue("username")
 	password := c.FormValue("password")
 
-	// Mock check (In a real app, check against database)
-	// Expected credentials -> username: admin, password: password123
+	// mock check (in a real app, check against database)
+	// expected credentials -> username: admin, password: password123
 	if username != "admin" || password != "password123" {
 		return echo.ErrUnauthorized
 	}
 
-	// Set custom claims for the token
+	// set custom claims for the token
 	claims := &jwtCustomClaims{
 		"Bitaksi Admin",
 		true,
 		jwt.RegisteredClaims{
-			// Token expires in 72 hours
+			// token expires in 72 hours
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
 		},
 	}
 
-	// Create token with claims using HS256 signing method
+	// create token with claims using hs256 signing method
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	// Generate encoded token using the secret key
-	t, err := token.SignedString([]byte("secret"))
+	// security fix: sign token using the same secret from environment
+	jwtSecret := getEnv("JWT_SECRET", "secret")
+
+	// generate encoded token
+	t, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
 		return err
 	}
 
-	// Return token in JSON response
+	// return token in json response
 	return c.JSON(http.StatusOK, map[string]string{
 		"token": t,
 	})
+}
+
+// getEnv retrieves the value of the environment variable named by the key.
+// it returns the value, which will be empty if the variable is not present.
+// if the variable is not present, it returns the fallback value.
+
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return fallback
 }
