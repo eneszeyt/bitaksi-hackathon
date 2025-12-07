@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/eneszeyt/bitaksi-driver-service/internal/models"
@@ -17,13 +18,37 @@ func NewDriverHandler(service service.DriverService) *DriverHandler {
 	return &DriverHandler{service: service}
 }
 
-// CreateDriver handles POST requests
-func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+// DriversRoot handles /drivers endpoint (GET for List, POST for Create)
+func (h *DriverHandler) DriversRoot(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.createDriver(w, r)
+	case http.MethodGet:
+		h.listDrivers(w, r)
+	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// DriverByID handles /drivers/{id} endpoint (PUT for Update)
+func (h *DriverHandler) DriverByID(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from URL path
+	id := strings.TrimPrefix(r.URL.Path, "/drivers/")
+	if id == "" {
+		http.Error(w, "missing driver id", http.StatusBadRequest)
 		return
 	}
 
+	switch r.Method {
+	case http.MethodPut:
+		h.updateDriver(w, r, id)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// private method: createDriver
+func (h *DriverHandler) createDriver(w http.ResponseWriter, r *http.Request) {
 	var driver models.Driver
 	if err := json.NewDecoder(r.Body).Decode(&driver); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -41,21 +66,8 @@ func (h *DriverHandler) CreateDriver(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
 
-// UpdateDriver handles PUT requests (e.g., /drivers/{id})
-func (h *DriverHandler) UpdateDriver(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// extract id from url path (simple parsing)
-	// path: /drivers/12345 -> id: 12345
-	id := strings.TrimPrefix(r.URL.Path, "/drivers/")
-	if id == "" {
-		http.Error(w, "missing driver id", http.StatusBadRequest)
-		return
-	}
-
+// private method: updateDriver
+func (h *DriverHandler) updateDriver(w http.ResponseWriter, r *http.Request, id string) {
 	var driver models.Driver
 	if err := json.NewDecoder(r.Body).Decode(&driver); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -67,6 +79,32 @@ func (h *DriverHandler) UpdateDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"updated"}`))
+	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+// private method: listDrivers
+func (h *DriverHandler) listDrivers(w http.ResponseWriter, r *http.Request) {
+	// parse query params ?page=1&pageSize=20
+	pageStr := r.URL.Query().Get("page")
+	pageSizeStr := r.URL.Query().Get("pageSize")
+
+	page, _ := strconv.Atoi(pageStr)
+	pageSize, _ := strconv.Atoi(pageSizeStr)
+
+	// service will handle defaults if zero
+	drivers, err := h.service.ListDrivers(r.Context(), page, pageSize)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// ensure empty slice instead of null in json
+	if drivers == nil {
+		drivers = []models.Driver{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(drivers)
 }

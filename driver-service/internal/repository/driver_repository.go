@@ -9,12 +9,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // DriverRepository defines database operations
 type DriverRepository interface {
 	Create(ctx context.Context, driver *models.Driver) (string, error)
 	Update(ctx context.Context, id string, driver *models.Driver) error
+	List(ctx context.Context, page, pageSize int) ([]models.Driver, error)
 }
 
 type driverRepositoryImpl struct {
@@ -49,7 +51,6 @@ func (r *driverRepositoryImpl) Update(ctx context.Context, id string, driver *mo
 		return errors.New("invalid id format")
 	}
 
-	// update query: set updated_at and other fields
 	driver.UpdatedAt = time.Now()
 
 	update := bson.M{
@@ -73,4 +74,28 @@ func (r *driverRepositoryImpl) Update(ctx context.Context, id string, driver *mo
 	}
 
 	return nil
+}
+
+// List returns a paginated list of drivers
+func (r *driverRepositoryImpl) List(ctx context.Context, page, pageSize int) ([]models.Driver, error) {
+	// calculate skip count (e.g. page 1 -> skip 0, page 2 -> skip 20)
+	skip := (page - 1) * pageSize
+
+	opts := options.Find().
+		SetSkip(int64(skip)).
+		SetLimit(int64(pageSize)).
+		SetSort(bson.D{{Key: "createdAt", Value: -1}}) // newest first
+
+	cursor, err := r.collection.Find(ctx, bson.M{}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var drivers []models.Driver
+	if err := cursor.All(ctx, &drivers); err != nil {
+		return nil, err
+	}
+
+	return drivers, nil
 }

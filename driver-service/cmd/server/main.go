@@ -17,25 +17,28 @@ func main() {
 	cfg := config.LoadConfig()
 	fmt.Printf("starting driver service on port %s...\n", cfg.Port)
 
+	// connect to database
 	mongoClient, err := database.ConnectMongoDB(cfg.MongoURI)
 	if err != nil {
 		log.Fatalf("mongo connection failed: %v", err)
 	}
 	defer mongoClient.Disconnect(context.Background())
 
+	// dependency injection
 	db := mongoClient.Database(cfg.DBName)
 	repo := repository.NewDriverRepository(db)
 	svc := service.NewDriverService(repo)
 	h := handler.NewDriverHandler(svc)
 
 	// --- ROUTES ---
-	// 1. Create (POST /drivers)
-	http.HandleFunc("/drivers", h.CreateDriver)
 
-	// 2. Update (PUT /drivers/{id})
-	// Sondaki "/" işareti önemli, bu sayede /drivers/123 gibi alt yolları yakalar
-	http.HandleFunc("/drivers/", h.UpdateDriver)
+	// 1. /drivers -> GET (List) & POST (Create)
+	http.HandleFunc("/drivers", h.DriversRoot)
 
+	// 2. /drivers/ -> PUT (Update) (trailing slash matches subpaths like /drivers/123)
+	http.HandleFunc("/drivers/", h.DriverByID)
+
+	// start server
 	addr := ":" + cfg.Port
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("server failed: %v", err)
