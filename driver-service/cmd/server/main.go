@@ -12,28 +12,30 @@ import (
 
 func main() {
 	cfg := config.LoadConfig()
-	fmt.Printf("Driver Service Başlıyor... Port: %s\n", cfg.Port)
+	fmt.Printf("Driver Service is starting... Port: %s\n", cfg.Port)
 
-	// 1. Veritabanına Bağlan
+	// 1. connect to database
+
 	mongoClient, err := database.ConnectMongoDB(cfg.MongoURI)
 	if err != nil {
-		log.Fatalf("❌ Veritabanına bağlanılamadı: %v", err)
+		log.Fatalf("❌ Failed to connect to database: %v", err)
 	}
 
-	// Uygulama kapanırken bağlantıyı kes
+	// disconnect when app closes
+
 	defer func() {
 		if err := mongoClient.Disconnect(context.Background()); err != nil {
-			log.Printf("Disconnect hatası: %v", err)
+			log.Printf("Disconnect error: %v", err)
 		}
 	}()
 
-	// 2. HTTP Sunucusunu Başlat
+	// 2. initialize to HTTP Server
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Driver Service + MongoDB Bağlantısı Aktif! 🚀")
+		fmt.Fprintf(w, "Driver Service + MongoDB connection is Active! 🚀")
 	})
 
 	addr := ":" + cfg.Port
 	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Fatalf("Sunucu hatası: %v", err)
+		log.Fatalf("Server error: %v", err)
 	}
 }
