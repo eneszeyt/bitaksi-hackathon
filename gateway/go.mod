@@ -1,6 +1,6 @@
 module github.com/eneszeyt/bitaksi-gateway
 
-go 1.25.4
+go 1.24
 
 require github.com/labstack/echo/v4 v4.13.4
 

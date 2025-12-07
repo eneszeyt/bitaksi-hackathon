@@ -18,7 +18,7 @@ func NewDriverHandler(service service.DriverService) *DriverHandler {
 	return &DriverHandler{service: service}
 }
 
-// DriversRoot handles /drivers endpoint (GET for List, POST for Create)
+// DriversRoot handles /drivers endpoint
 func (h *DriverHandler) DriversRoot(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
@@ -30,9 +30,8 @@ func (h *DriverHandler) DriversRoot(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// DriverByID handles /drivers/{id} endpoint (PUT for Update)
+// DriverByID handles /drivers/{id} endpoint
 func (h *DriverHandler) DriverByID(w http.ResponseWriter, r *http.Request) {
-	// Extract ID from URL path
 	id := strings.TrimPrefix(r.URL.Path, "/drivers/")
 	if id == "" {
 		http.Error(w, "missing driver id", http.StatusBadRequest)
@@ -47,9 +46,18 @@ func (h *DriverHandler) DriverByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// SearchNearby handles /drivers/nearby endpoint
+// SearchNearby godoc
+// @Summary      Find nearby drivers
+// @Description  Calculates distance using Haversine formula and returns drivers within 6km radius
+// @Tags         drivers
+// @Accept       json
+// @Produce      json
+// @Param        lat       query     number  true  "Latitude"
+// @Param        lon       query     number  true  "Longitude"
+// @Param        taxiType  query     string  false "Taxi Type (e.g. yellow, black)"
+// @Success      200       {array}   models.Driver
+// @Router       /drivers/nearby [get]
 func (h *DriverHandler) SearchNearby(w http.ResponseWriter, r *http.Request) {
-	// Parse query params
 	latStr := r.URL.Query().Get("lat")
 	lonStr := r.URL.Query().Get("lon")
 	taxiType := r.URL.Query().Get("taxiType")
@@ -80,8 +88,17 @@ func (h *DriverHandler) SearchNearby(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
-// --- Private Helper Methods ---
+// --- Private Helper Methods (Annotated for Swagger) ---
 
+// createDriver godoc
+// @Summary      Create a new driver
+// @Description  Registers a new taxi driver in the database
+// @Tags         drivers
+// @Accept       json
+// @Produce      json
+// @Param        driver  body      models.Driver  true  "Driver Information"
+// @Success      201     {object}  map[string]string
+// @Router       /drivers [post]
 func (h *DriverHandler) createDriver(w http.ResponseWriter, r *http.Request) {
 	var driver models.Driver
 	if err := json.NewDecoder(r.Body).Decode(&driver); err != nil {
@@ -100,6 +117,16 @@ func (h *DriverHandler) createDriver(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
 
+// updateDriver godoc
+// @Summary      Update a driver
+// @Description  Updates existing driver information by ID
+// @Tags         drivers
+// @Accept       json
+// @Produce      json
+// @Param        id      path      string         true  "Driver ID"
+// @Param        driver  body      models.Driver  true  "Driver Data"
+// @Success      200     {object}  map[string]string
+// @Router       /drivers/{id} [put]
 func (h *DriverHandler) updateDriver(w http.ResponseWriter, r *http.Request, id string) {
 	var driver models.Driver
 	if err := json.NewDecoder(r.Body).Decode(&driver); err != nil {
@@ -117,6 +144,16 @@ func (h *DriverHandler) updateDriver(w http.ResponseWriter, r *http.Request, id 
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 }
 
+// listDrivers godoc
+// @Summary      List drivers
+// @Description  Get all drivers with pagination
+// @Tags         drivers
+// @Accept       json
+// @Produce      json
+// @Param        page      query     int  false  "Page number"
+// @Param        pageSize  query     int  false  "Page size"
+// @Success      200       {array}   models.Driver
+// @Router       /drivers [get]
 func (h *DriverHandler) listDrivers(w http.ResponseWriter, r *http.Request) {
 	pageStr := r.URL.Query().Get("page")
 	pageSizeStr := r.URL.Query().Get("pageSize")

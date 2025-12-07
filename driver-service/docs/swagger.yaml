@@ -1,0 +1,159 @@
+basePath: /
+definitions:
+  models.Driver:
+    properties:
+      carBrand:
+        type: string
+      carModel:
+        type: string
+      createdAt:
+        type: string
+      firstName:
+        type: string
+      id:
+        type: string
+      lastName:
+        type: string
+      location:
+        $ref: '#/definitions/models.Location'
+      plate:
+        type: string
+      taxiType:
+        description: e.g., "yellow", "black"
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.Location:
+    properties:
+      lat:
+        type: number
+      lon:
+        type: number
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample driver service for Bitaksi Hackathon.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Bitaksi Driver Service API
+  version: "1.0"
+paths:
+  /drivers:
+    get:
+      consumes:
+      - application/json
+      description: Get all drivers with pagination
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Driver'
+            type: array
+      summary: List drivers
+      tags:
+      - drivers
+    post:
+      consumes:
+      - application/json
+      description: Registers a new taxi driver in the database
+      parameters:
+      - description: Driver Information
+        in: body
+        name: driver
+        required: true
+        schema:
+          $ref: '#/definitions/models.Driver'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new driver
+      tags:
+      - drivers
+  /drivers/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Updates existing driver information by ID
+      parameters:
+      - description: Driver ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Driver Data
+        in: body
+        name: driver
+        required: true
+        schema:
+          $ref: '#/definitions/models.Driver'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a driver
+      tags:
+      - drivers
+  /drivers/nearby:
+    get:
+      consumes:
+      - application/json
+      description: Calculates distance using Haversine formula and returns drivers
+        within 6km radius
+      parameters:
+      - description: Latitude
+        in: query
+        name: lat
+        required: true
+        type: number
+      - description: Longitude
+        in: query
+        name: lon
+        required: true
+        type: number
+      - description: Taxi Type (e.g. yellow, black)
+        in: query
+        name: taxiType
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Driver'
+            type: array
+      summary: Find nearby drivers
+      tags:
+      - drivers
+swagger: "2.0"

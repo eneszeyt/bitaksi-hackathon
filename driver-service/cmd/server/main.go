@@ -11,7 +11,25 @@ import (
 	"github.com/eneszeyt/bitaksi-driver-service/internal/repository"
 	"github.com/eneszeyt/bitaksi-driver-service/internal/service"
 	"github.com/eneszeyt/bitaksi-driver-service/pkg/database"
+
+	_ "github.com/eneszeyt/bitaksi-driver-service/docs" // This line is crucial for swagger to find generated docs
+	httpSwagger "github.com/swaggo/http-swagger"
 )
+
+// @title           Bitaksi Driver Service API
+// @version         1.0
+// @description     This is a sample driver service for Bitaksi Hackathon.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /
 
 func main() {
 	cfg := config.LoadConfig()
@@ -32,14 +50,16 @@ func main() {
 
 	// --- ROUTES ---
 
-	// 1. /drivers -> GET (List) & POST (Create)
+	// 1. Swagger Documentation Route
+	http.HandleFunc("/swagger/", httpSwagger.WrapHandler)
+
+	// 2. /drivers -> GET (List) & POST (Create)
 	http.HandleFunc("/drivers", h.DriversRoot)
 
-	// 2. /drivers/nearby -> GET (Nearby Search)
-	// IMPORTANT: This must be defined BEFORE "/drivers/" because "/drivers/" matches all subpaths
+	// 3. /drivers/nearby -> GET (Nearby Search)
 	http.HandleFunc("/drivers/nearby", h.SearchNearby)
 
-	// 3. /drivers/ -> PUT (Update) (trailing slash matches subpaths like /drivers/123)
+	// 4. /drivers/ -> PUT (Update)
 	http.HandleFunc("/drivers/", h.DriverByID)
 
 	// start server

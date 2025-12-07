@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # 1. MongoDB Database
   mongodb:
     image: mongo:6.0
     container_name: bitaksi-mongo
@@ -13,10 +14,8 @@ services:
     volumes:
       - ./mongo-data:/data/db
 
+  # 2. Mongo Express (Admin Panel)
   mongo-express:
-
-    # Thanks to this interface, the database can be viewed from the browser.
-
     image: mongo-express
     container_name: bitaksi-mongo-express
     restart: always
@@ -26,9 +25,35 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: password123
       ME_CONFIG_MONGODB_URL: mongodb://root:password123@mongodb:27017/
-
-      # panel login
       ME_CONFIG_BASICAUTH_USERNAME: root
       ME_CONFIG_BASICAUTH_PASSWORD: password123
     depends_on:
       - mongodb
+
+  # 3. Driver Service (Our Go App)
+  driver-service:
+    build: ./driver-service
+    container_name: bitaksi-driver-service
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # We can't say "localhost" in Docker, we have to use the service name ("mongodb")
+      MONGO_URI: mongodb://root:password123@mongodb:27017
+      DB_NAME: bitaksi_driver_db
+      PORT: 8080
+    depends_on:
+      - mongodb
+
+  # 4. API Gateway (Our Echo App)
+  gateway:
+    build: ./gateway
+    container_name: bitaksi-gateway
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DRIVER_SERVICE_URL=http://driver-service:8080
+    depends_on:
+      - driver-service
+      
