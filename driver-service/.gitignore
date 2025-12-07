@@ -1,0 +1,18 @@
+# sensitive files (never do commit!)
+.env
+
+# Go compiler outputs
+/bin
+/dist
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# test outputs 
+*.out
+
+# IDE folders
+.vscode/
+.idea/

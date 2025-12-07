@@ -1,0 +1,6 @@
+# Docker veri klasörleri
+mongo-data/
+
+# IDE dosyaları
+.vscode/
+.idea/
