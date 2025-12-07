@@ -15,12 +15,12 @@ type Config struct {
 
 func LoadConfig() *Config {
 	if err := godotenv.Load(); err != nil {
-		log.Println("INFO: .env file not read, checking environment variables...")
+		log.Println("INFO: Could not read .env file, using defaults...")
 	}
 
 	return &Config{
 		Port:     getEnv("PORT", "8080"),
-		MongoURI: getEnv("MONGO_URI", "mongodb://localhost:27017"),
+		MongoURI: getEnv("MONGO_URI", "mongodb://root:password123@localhost:27017"),
 		DBName:   getEnv("DB_NAME", "bitaksi_driver_db"),
 	}
 }

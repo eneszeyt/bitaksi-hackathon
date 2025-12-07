@@ -10,18 +10,22 @@ import (
 // DriverService defines business logic
 type DriverService interface {
 	CreateDriver(ctx context.Context, driver *models.Driver) (string, error)
+	UpdateDriver(ctx context.Context, id string, driver *models.Driver) error
 }
 
 type driverServiceImpl struct {
 	repo repository.DriverRepository
 }
 
-// NewDriverService creates service instance
 func NewDriverService(repo repository.DriverRepository) DriverService {
 	return &driverServiceImpl{repo: repo}
 }
 
-// CreateDriver implements the business logic for creating a driver
 func (s *driverServiceImpl) CreateDriver(ctx context.Context, driver *models.Driver) (string, error) {
 	return s.repo.Create(ctx, driver)
+}
+
+// UpdateDriver logic
+func (s *driverServiceImpl) UpdateDriver(ctx context.Context, id string, driver *models.Driver) error {
+	return s.repo.Update(ctx, id, driver)
 }

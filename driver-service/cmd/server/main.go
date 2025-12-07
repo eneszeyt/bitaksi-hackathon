@@ -7,35 +7,37 @@ import (
 	"net/http"
 
 	"github.com/eneszeyt/bitaksi-driver-service/internal/config"
+	"github.com/eneszeyt/bitaksi-driver-service/internal/handler"
+	"github.com/eneszeyt/bitaksi-driver-service/internal/repository"
+	"github.com/eneszeyt/bitaksi-driver-service/internal/service"
 	"github.com/eneszeyt/bitaksi-driver-service/pkg/database"
 )
 
 func main() {
 	cfg := config.LoadConfig()
-	fmt.Printf("Driver Service is starting... Port: %s\n", cfg.Port)
-
-	// 1. connect to database
+	fmt.Printf("starting driver service on port %s...\n", cfg.Port)
 
 	mongoClient, err := database.ConnectMongoDB(cfg.MongoURI)
 	if err != nil {
-		log.Fatalf("❌ Failed to connect to database: %v", err)
+		log.Fatalf("mongo connection failed: %v", err)
 	}
+	defer mongoClient.Disconnect(context.Background())
 
-	// disconnect when app closes
+	db := mongoClient.Database(cfg.DBName)
+	repo := repository.NewDriverRepository(db)
+	svc := service.NewDriverService(repo)
+	h := handler.NewDriverHandler(svc)
 
-	defer func() {
-		if err := mongoClient.Disconnect(context.Background()); err != nil {
-			log.Printf("Disconnect error: %v", err)
-		}
-	}()
+	// --- ROUTES ---
+	// 1. Create (POST /drivers)
+	http.HandleFunc("/drivers", h.CreateDriver)
 
-	// 2. initialize to HTTP Server
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Driver Service + MongoDB connection is Active! 🚀")
-	})
+	// 2. Update (PUT /drivers/{id})
+	// Sondaki "/" işareti önemli, bu sayede /drivers/123 gibi alt yolları yakalar
+	http.HandleFunc("/drivers/", h.UpdateDriver)
 
 	addr := ":" + cfg.Port
 	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Fatalf("Server error: %v", err)
+		log.Fatalf("server failed: %v", err)
 	}
 }
